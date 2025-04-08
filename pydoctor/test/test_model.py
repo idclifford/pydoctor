@@ -20,6 +20,7 @@ from pydoctor.sphinx import CacheT
 from pydoctor.test import CapSys
 from pydoctor.test.test_astbuilder import fromText
 from pydoctor.test.test_packages import processPackage
+from pydoctor.test import FixtureRequest, TempPathFactory
 
 
 class FakeOptions:
@@ -143,22 +144,35 @@ def test_fetchIntersphinxInventories_empty() -> None:
     assert {} == sut.intersphinx._links
 
 
-def test_fetchIntersphinxInventories_content() -> None:
+@pytest.fixture(scope='module')
+def tempDir(request: FixtureRequest, tmp_path_factory: TempPathFactory) -> Path:
+    name = request.module.__name__.split('.')[-1]
+    return tmp_path_factory.mktemp(f'{name}-cache')
+
+
+def test_fetchIntersphinxInventories_content(tempDir:Path) -> None:
     """
     Download and parse intersphinx inventories for each configured
     intersphix.
     """
+
     options = Options.defaults()
-    options.intersphinx = [
-        'http://sphinx/objects.inv',
-        'file:///twisted/index.inv',
-        ]
+    options.intersphinx = ['http://sphinx/objects.inv']
     url_content = {
         'http://sphinx/objects.inv': zlib.compress(
-            b'sphinx.module py:module -1 sp.html -'),
-        'file:///twisted/index.inv': zlib.compress(
-            b'twisted.package py:module -1 tm.html -'),
+            b'sphinx.module py:module -1 sp.html -')
         }
+    
+    root_dir = tempDir
+    path = root_dir / 'objects.inv'
+    with open(path, 'wb') as f:
+        f.write(zlib.compress(b'twisted.package py:module -1 tm.html -'))
+    
+    with open(root_dir / 'tm.html', "w") as f:
+        pass
+        
+    options.intersphinx_file = [path]
+    
     sut = model.System(options=options)
     log = []
     def log_msg(part: str, msg: str) -> None:
@@ -180,10 +194,7 @@ def test_fetchIntersphinxInventories_content() -> None:
         'http://sphinx/sp.html' ==
         sut.intersphinx.getLink('sphinx.module')
         )
-    assert (
-        'file:///twisted/tm.html' ==
-        sut.intersphinx.getLink('twisted.package')
-        )
+    assert ((root_dir / 'tm.html').samefile(sut.intersphinx.getLink('twisted.package')))
 
 
 def test_docsources_class_attribute() -> None:

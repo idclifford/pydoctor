@@ -757,3 +757,37 @@ def test_prepareCache(
 
     if clearCache:
         assert not cacheDirectory.exists()
+
+
+def test_intersphinx_file(inv_reader_nolog: sphinx.SphinxInventory,
+                          tmp_path_factory: TempPathFactory) -> None:
+    """
+    Functional test for updating from a file
+    """
+
+    payload = (
+        b'some.module1 py:module -1 module1.html -\n'
+        b'other.module2 py:module 0 module2.html Other description\n'
+        )
+    # Patch URL loader to avoid hitting the system.
+    content = b"""# Sphinx inventory version 2
+# Project: some-name
+# Version: 2.0
+# The rest of this file is compressed with zlib.
+""" + zlib.compress(payload)
+
+    root_dir = tmp_path_factory.mktemp('test_intersphinx_file')
+    path = root_dir / 'objects.inv'
+    with open(path, 'wb') as f:
+        f.write(content)
+
+    with open(root_dir / 'module1.html', "w") as f:
+        pass
+
+    with open(root_dir / 'module2.html', "w") as f:
+        pass
+
+    inv_reader_nolog.update_file(path)
+
+    assert (root_dir / 'module1.html').samefile(inv_reader_nolog.getLink('some.module1'))
+    assert (root_dir / 'module2.html').samefile(inv_reader_nolog.getLink('other.module2'))

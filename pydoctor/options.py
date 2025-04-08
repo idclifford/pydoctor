@@ -221,6 +221,14 @@ def get_parser() -> ArgumentParser:
         help=MAX_AGE_HELP,
         metavar='DURATION',
     )
+
+    parser.add_argument(
+        '--intersphinx-file', action='append', dest='intersphinx_file',
+        metavar='PATH_TO_OBJECTS.INV', default=[],
+        help=(
+            "Use Sphinx objects inventory file to generate links to external "
+            "documentation. Can be repeated."))
+    
     parser.add_argument(
         '--pyval-repr-maxlines', dest='pyvalreprmaxlines', default=7, type=int, metavar='INT',
         help='Maxinum number of lines for a constant value representation. Use 0 for unlimited.')
@@ -381,6 +389,7 @@ class Options:
     intersphinx_cache_path:     str                                 = attr.ib()
     clear_intersphinx_cache:    bool                                = attr.ib()
     intersphinx_cache_max_age:  str                                 = attr.ib()
+    intersphinx_file:       List[str]                               = attr.ib()
     pyvalreprlinelen:       int                                     = attr.ib()
     pyvalreprmaxlines:      int                                     = attr.ib()
     sidebarexpanddepth:     int                                     = attr.ib()

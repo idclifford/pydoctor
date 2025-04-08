@@ -31,25 +31,8 @@ else:
     Documentable = object
     CacheT = object
 
-try:
-    from requests_file import FileAdapter
-    FILE_ADAPTER = True
-except ModuleNotFoundError:
-    FILE_ADAPTER = False
-
 
 logger = logging.getLogger(__name__)
-
-
-class SphinxSession(requests.Session):
-    """
-    Requests session that suports file:// URLs.
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        if FILE_ADAPTER:
-            self.mount('file://', FileAdapter())    
 
 
 class SphinxInventory:
@@ -92,6 +75,17 @@ class SphinxInventory:
 
         payload = self._getPayload(base_url, data)
         self._links.update(self._parseInventory(base_url, payload))
+
+    def update_file(self, path: str) -> None:
+        """
+        Update inventory from local path.
+        """
+        with open(path, 'rb') as f:
+            data = f.read()
+
+        payload = self._getPayload(path, data)
+        root_dir = os.path.dirname(path)
+        self._links.update(self._parseInventory(root_dir, payload))
 
     def _getPayload(self, base_url: str, data: bytes) -> str:
         """
@@ -427,7 +421,7 @@ def prepareCache(
         enableCache: bool,
         cachePath: str,
         maxAge: str,
-        sessionFactory: Callable[[], requests.Session] = SphinxSession,
+        sessionFactory: Callable[[], requests.Session] = requests.Session,
         ) -> IntersphinxCache:
     """
     Prepare an Intersphinx cache.

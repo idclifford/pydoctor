@@ -44,6 +44,11 @@ class FakeDocumentable:
     filepath: str
 
 
+@pytest.fixture(scope='module')
+def tempDir(request: FixtureRequest, tmp_path_factory: TempPathFactory) -> Path:
+    name = request.module.__name__.split('.')[-1]
+    return tmp_path_factory.mktemp(f'{name}-cache')
+
 
 @pytest.mark.parametrize('projectBaseDir', [
     PurePosixPath("/foo/bar/ProjectName"),
@@ -144,35 +149,22 @@ def test_fetchIntersphinxInventories_empty() -> None:
     assert {} == sut.intersphinx._links
 
 
-@pytest.fixture(scope='module')
-def tempDir(request: FixtureRequest, tmp_path_factory: TempPathFactory) -> Path:
-    name = request.module.__name__.split('.')[-1]
-    return tmp_path_factory.mktemp(f'{name}-cache')
-
-
-def test_fetchIntersphinxInventories_content(tempDir:Path) -> None:
+def test_fetchIntersphinxInventories_content() -> None:
     """
     Download and parse intersphinx inventories for each configured
     intersphix.
     """
-
     options = Options.defaults()
-    options.intersphinx = ['http://sphinx/objects.inv']
+    options.intersphinx = [
+        'http://sphinx/objects.inv',
+        'file:///twisted/index.inv',
+        ]
     url_content = {
         'http://sphinx/objects.inv': zlib.compress(
-            b'sphinx.module py:module -1 sp.html -')
+            b'sphinx.module py:module -1 sp.html -'),
+        'file:///twisted/index.inv': zlib.compress(
+            b'twisted.package py:module -1 tm.html -'),
         }
-    
-    root_dir = tempDir
-    path = root_dir / 'objects.inv'
-    with open(path, 'wb') as f:
-        f.write(zlib.compress(b'twisted.package py:module -1 tm.html -'))
-    
-    with open(root_dir / 'tm.html', "w") as f:
-        pass
-        
-    options.intersphinx_file = [path]
-    
     sut = model.System(options=options)
     log = []
     def log_msg(part: str, msg: str) -> None:
@@ -194,6 +186,45 @@ def test_fetchIntersphinxInventories_content(tempDir:Path) -> None:
         'http://sphinx/sp.html' ==
         sut.intersphinx.getLink('sphinx.module')
         )
+    assert (
+        'file:///twisted/tm.html' ==
+        sut.intersphinx.getLink('twisted.package')
+        )
+
+
+def test_fetchIntersphinxInventories_content_file(tempDir:Path) -> None:
+    """
+    Read and parse intersphinx inventories from file for each configured
+    intersphix.
+    """
+    root_dir = tempDir
+    path = root_dir / 'objects.inv'
+    with open(path, 'wb') as f:
+        f.write(zlib.compress(b'twisted.package py:module -1 tm.html -'))
+    
+    with open(root_dir / 'tm.html', "w") as f:
+        pass
+        
+    options = Options.defaults()
+    options.intersphinx_file = [path]
+
+    sut = model.System(options=options)
+    log = []
+    def log_msg(part: str, msg: str) -> None:
+        log.append((part, msg))
+    sut.msg = log_msg # type: ignore[assignment]
+
+    class Cache(CacheT):
+        """Avoid touching the network."""
+        def get(self, url: str) -> bytes:
+            return b''
+        def close(self) -> None:
+            return None
+        
+
+    sut.fetchIntersphinxInventories(Cache())
+
+    assert [] == log
     assert ((root_dir / 'tm.html').samefile(sut.intersphinx.getLink('twisted.package')))
 
 

@@ -6,6 +6,7 @@ import datetime
 import io
 import string
 import zlib
+import re
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Iterator, List, Optional, Tuple, cast
@@ -19,7 +20,7 @@ from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
 from . import CapLog, FixtureRequest, MonkeyPatch, TempPathFactory
-from pydoctor import model, sphinx
+from pydoctor import model, sphinx, driver
 
 
 
@@ -791,3 +792,50 @@ def test_intersphinx_file(inv_reader_nolog: sphinx.SphinxInventory,
 
     assert (root_dir / 'module1.html').samefile(inv_reader_nolog.getLink('some.module1'))
     assert (root_dir / 'module2.html').samefile(inv_reader_nolog.getLink('other.module2'))
+
+
+def test_generate_then_load_file(tmp_path_factory: TempPathFactory) -> None:
+    '''
+    Generate an inventory and save to file. Test --intersphinx-file to
+    correctly reproduce links to this.
+    '''
+    from pydoctor.test.test_astbuilder import fromText
+    from pydoctor.test.test_epydoc2stan import docstring2html
+
+    # Create a testing inventory file under tmp_path/objects.inv
+    src = '''
+    class C:
+        def __init__(self, a):
+            self.a = a
+    '''
+    system = fromText(src, modname='mylib').system
+    tmp_path = tmp_path_factory.mktemp('test_generate_then_load_file')
+    
+    inv_writer, logger = get_inv_writer_with_logger(
+        name='project-name',
+        version='1.2.0rc1',
+        )
+    inv_writer.generate(system.rootobjects, tmp_path)
+
+    # Then load this inventory file in a new system, include links to elements
+    src = '''
+    from mylib import C
+    class Client:
+        "L{C}"
+        a: bytes 
+        "L{C.a}"
+    '''
+    options2 = model.Options.from_args([f'--intersphinx-file={tmp_path / "objects.inv"}'])
+    model2 = fromText(src, 
+                      modname='myclient', 
+                      system=driver.get_system(options2))
+    system2 = model2.system
+    
+    Client_doc = docstring2html(system2.allobjects['myclient.Client'])
+    Client_a_doc = docstring2html(system2.allobjects['myclient.Client.a'])
+
+    assert re.fullmatch('<div><p><code><a href=".*" class="intersphinx-link">C</a></code></p></div>', 
+                        Client_doc.replace('\n', '')) is not None
+    assert re.fullmatch('<div><p><code><a href=".*" class="intersphinx-link">C.a</a></code></p></div>',
+                        Client_a_doc.replace('\n', '')) is not None
+

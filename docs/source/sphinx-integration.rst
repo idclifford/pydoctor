@@ -22,6 +22,11 @@ with ``L{}`` tag using `epytext`, will be linked to the Python element. Example:
   `datetime.datetime`
   L{datetime.datetime}
 
+Similarly, you can link external API documentation from a local directory
+with the following cumulative configuration option::
+
+    --intersphinx-file=~/projects/myproject/docs/api/objects.inv
+
 Simple as that!
 
 Linking from Sphinx to your pydoctor API docs

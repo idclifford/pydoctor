@@ -43,6 +43,18 @@ PydoctorConfigParser = CompositeConfigParser(
 
 # ARGUMENTS PARSING
 
+def _intersphinx_file_tuple(s):
+    '''
+    Function returning a tuple (inventory file, base_url) for the 
+    intersphinx-file commandline argument
+    '''
+    if "::" in s:
+        filename, base_url = s.split("::")
+        return (filename, base_url)
+    else:
+        return (s, None)
+
+
 def get_parser() -> ArgumentParser:
     parser = ArgumentParser(
         prog='pydoctor',
@@ -221,13 +233,15 @@ def get_parser() -> ArgumentParser:
         help=MAX_AGE_HELP,
         metavar='DURATION',
     )
-
+        
     parser.add_argument(
         '--intersphinx-file', action='append', dest='intersphinx_file',
-        metavar='PATH_TO_OBJECTS.INV', default=[],
+        metavar='PATH_TO_OBJECTS.INV[::BASE_URL]', default=[], 
+        type=_intersphinx_file_tuple,
         help=(
             "Use Sphinx objects inventory file to generate links to external "
-            "documentation. Can be repeated."))
+            "documentation. If the optional base URL is provided, the links "
+            "will be made relative to this base URL. Can be repeated."))
     
     parser.add_argument(
         '--pyval-repr-maxlines', dest='pyvalreprmaxlines', default=7, type=int, metavar='INT',

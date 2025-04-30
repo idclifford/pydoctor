@@ -76,17 +76,25 @@ class SphinxInventory:
         payload = self._getPayload(base_url, data)
         self._links.update(self._parseInventory(base_url, payload))
 
-    def update_file(self, path: str) -> None:
+    def update_file(self, path: str, base_url: str=None) -> None:
         """
-        Update inventory from local path.
+        Update inventory from local path. If base_url is supplied, the
+        links are made relative to the supplied base url.
         """
         with open(path, 'rb') as f:
             data = f.read()
 
         payload = self._getPayload(path, data)
         root_dir = os.path.dirname(path)
-        self._links.update(self._parseInventory(root_dir, payload))
+        links = self._parseInventory(root_dir, payload)
 
+        if base_url is not None:
+            # Update module links and make relative to base_url
+            for name, (path, filename) in links.items():
+                links[name] = (base_url, filename)
+        
+        self._links.update(links)
+            
     def _getPayload(self, base_url: str, data: bytes) -> str:
         """
         Parse inventory and return clear text payload without comments.

@@ -1675,8 +1675,9 @@ class System:
         for url in self.options.intersphinx:
             self.intersphinx.update(cache, url)
         
-        for path in self.options.intersphinx_file:
-            self.intersphinx.update_file(path)
+        for path, base_url in self.options.intersphinx_file:
+            self.intersphinx.update_file(path, base_url)
+
 
 def defaultPostProcess(system:'System') -> None:
 

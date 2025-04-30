@@ -23,9 +23,18 @@ with ``L{}`` tag using `epytext`, will be linked to the Python element. Example:
   L{datetime.datetime}
 
 Similarly, you can link external API documentation from a local directory
-with the following cumulative configuration option::
+with the following configuration option::
 
     --intersphinx-file=~/projects/myproject/docs/api/objects.inv
+
+This will link to API documentation relative to the file location.
+If the API documentation are served online but behind an authentication 
+page then the object inventory file will not accessible to pydoctor. In
+this case, you can download the inventory file but still link to the
+correct internet URL using an optional base URL.
+
+	--intersphinx-file=~/projects/myproject/docs/api/objects.inv::https://sphinx/api
+
 
 Simple as that!
 

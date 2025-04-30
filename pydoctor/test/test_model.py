@@ -192,6 +192,43 @@ def test_fetchIntersphinxInventories_content() -> None:
         )
 
 
+def test_fetchIntersphinxInventories_content_file_with_base_url(tempDir:Path) -> None:
+    """
+    Read and parse intersphinx inventories from file for each configured
+    intersphix.
+    """
+    root_dir = tempDir
+    path = root_dir / 'objects.inv'
+    with open(path, 'wb') as f:
+        f.write(zlib.compress(b'twisted.package py:module -1 tm.html -'))
+    
+    with open(root_dir / 'tm.html', "w") as f:
+        pass
+
+    options = Options.defaults()
+    options.intersphinx_file = [(path, "http://sphinx")]
+
+    sut = model.System(options=options)
+    log = []
+    def log_msg(part: str, msg: str) -> None:
+        log.append((part, msg))
+    sut.msg = log_msg # type: ignore[assignment]
+
+    class Cache(CacheT):
+        """Avoid touching the network."""
+        def get(self, url: str) -> bytes:
+            return b''
+        def close(self) -> None:
+            return None
+        
+
+    sut.fetchIntersphinxInventories(Cache())
+
+    assert [] == log
+    assert ('http://sphinx/tm.html' == 
+            sut.intersphinx.getLink('twisted.package'))
+
+
 def test_fetchIntersphinxInventories_content_file(tempDir:Path) -> None:
     """
     Read and parse intersphinx inventories from file for each configured
@@ -206,7 +243,7 @@ def test_fetchIntersphinxInventories_content_file(tempDir:Path) -> None:
         pass
         
     options = Options.defaults()
-    options.intersphinx_file = [path]
+    options.intersphinx_file = [(path, None)]
 
     sut = model.System(options=options)
     log = []

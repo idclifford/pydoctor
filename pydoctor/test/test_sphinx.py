@@ -868,6 +868,6 @@ def test_generate_then_load_file(tmp_path: Path) -> None:
     Client_doc = docstring2html(system2.allobjects['myclient.Client'])
     Client_a_doc = docstring2html(system2.allobjects['myclient.Client.a'])
 
-    assert f'<a href="{tmp_path.as_posix()}/mylib.C.html"' in Client_doc.replace('\n', '')
-    assert f'<a href="{tmp_path.as_posix()}/mylib.C.html#a"' in Client_a_doc.replace('\n', '')
+    assert f'<a href="{tmp_path}/mylib.C.html"' in Client_doc.replace('\n', '')
+    assert f'<a href="{tmp_path}/mylib.C.html#a"' in Client_a_doc.replace('\n', '')
 

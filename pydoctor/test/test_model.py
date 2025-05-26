@@ -12,7 +12,7 @@ import pytest
 
 from twisted.web.template import Tag
 
-from pydoctor.options import Options
+from pydoctor.options import IntersphinxFile, Options
 from pydoctor import model, stanutils, extensions
 from pydoctor.templatewriter import pages
 from pydoctor.utils import parse_privacy_tuple
@@ -196,11 +196,11 @@ def test_fetchIntersphinxInventories_content_file_with_base_url(tmp_path: Path) 
     with open(path, 'wb') as f:
         f.write(zlib.compress(b'twisted.package py:module -1 tm.html -'))
     
-    with open(tmp_path / 'tm.html', "w") as f:
+    with open(tmp_path / 'tm.html', "w") as _:
         pass
 
     options = Options.defaults()
-    options.intersphinx_file = [(path, "http://sphinx")]
+    options.intersphinx_file = [IntersphinxFile(path, "http://sphinx")]
 
     sut = model.System(options=options)
     log = []
@@ -232,11 +232,11 @@ def test_fetchIntersphinxInventories_content_file(tmp_path: Path) -> None:
     with open(path, 'wb') as f:
         f.write(zlib.compress(b'twisted.package py:module -1 tm.html -'))
     
-    with open(tmp_path / 'tm.html', "w") as f:
+    with open(tmp_path / 'tm.html', "w") as _:
         pass
         
     options = Options.defaults()
-    options.intersphinx_file = [(path, None)]
+    options.intersphinx_file = [IntersphinxFile(path, None)]
 
     sut = model.System(options=options)
     log = []
@@ -255,7 +255,7 @@ def test_fetchIntersphinxInventories_content_file(tmp_path: Path) -> None:
     sut.fetchIntersphinxInventories(Cache())
 
     assert [] == log
-    assert ((tmp_path / 'tm.html').samefile(sut.intersphinx.getLink('twisted.package')))
+    assert ((tmp_path / 'tm.html').samefile(sut.intersphinx.getLink('twisted.package'))) # type: ignore
 
 
 def test_docsources_class_attribute() -> None:

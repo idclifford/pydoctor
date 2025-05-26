@@ -76,7 +76,7 @@ class SphinxInventory:
         payload = self._getPayload(base_url, data)
         self._links.update(self._parseInventory(base_url, payload))
 
-    def update_file(self, path: str, base_url: str | None) -> None:
+    def update_file(self, path: str | os.PathLike[str], base_url: str | None) -> None:
         """
         Update inventory from local path. If base_url is supplied, the
         links are made relative to the supplied base url.
@@ -84,7 +84,7 @@ class SphinxInventory:
         with open(path, 'rb') as f:
             data = f.read()
 
-        payload = self._getPayload(path, data)
+        payload = self._getPayload(str(path), data)
         links = self._parseInventory(base_url or os.path.dirname(path), 
                                      payload)
         
@@ -208,7 +208,7 @@ class SphinxInventoryWriter:
     def error(self, where: str, message: str) -> None:
         self._logger(where, message, thresh=-1)
 
-    def generate(self, subjects: Iterable[Documentable], basepath: str) -> None:
+    def generate(self, subjects: Iterable[Documentable], basepath: str | os.PathLike[str]) -> None:
         """
         Generate Sphinx objects inventory version 2 at `basepath`/objects.inv.
         """

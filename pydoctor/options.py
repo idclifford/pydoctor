@@ -3,6 +3,7 @@ The command-line parsing.
 """
 from __future__ import annotations
 
+import os
 import re
 from typing import NamedTuple, Sequence, List, Optional, Type, Tuple, TYPE_CHECKING
 import sys
@@ -316,7 +317,7 @@ def _convert_htmlbaseurl(url:str | None) -> str | None:
         url += '/'
     return url
 class IntersphinxFile(NamedTuple):
-    filepath: str
+    filepath: str | os.PathLike[str]
     base_url: str | None
 def _parse_intersphinx_file(s: str) -> IntersphinxFile:
     '''

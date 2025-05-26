@@ -796,7 +796,7 @@ def test_intersphinx_file(inv_reader_nolog: sphinx.SphinxInventory,
 
 def test_intersphinx_file_with_base_url(
         inv_reader_nolog: sphinx.SphinxInventory,
-        tmp_path_factory: TempPathFactory) -> None:
+        tmp_path: Path) -> None:
     """
     Functional test for updating from a file
     """
@@ -812,15 +812,14 @@ def test_intersphinx_file_with_base_url(
 # The rest of this file is compressed with zlib.
 """ + zlib.compress(payload)
 
-    root_dir = tmp_path_factory.mktemp('test_intersphinx_file')
-    path = root_dir / 'objects.inv'
+    path = tmp_path / 'objects.inv'
     with open(path, 'wb') as f:
         f.write(content)
 
-    with open(root_dir / 'module1.html', "w") as f:
+    with open(tmp_path / 'module1.html', "w") as f:
         pass
 
-    with open(root_dir / 'module2.html', "w") as f:
+    with open(tmp_path / 'module2.html', "w") as f:
         pass
 
     inv_reader_nolog.update_file(path, "https://sphinx")
@@ -831,7 +830,7 @@ def test_intersphinx_file_with_base_url(
             inv_reader_nolog.getLink('other.module2'))
 
 
-def test_generate_then_load_file(tmp_path_factory: TempPathFactory) -> None:
+def test_generate_then_load_file(tmp_path: Path) -> None:
     '''
     Generate an inventory and save to file. Test --intersphinx-file to
     correctly reproduce links to this.
@@ -846,7 +845,6 @@ def test_generate_then_load_file(tmp_path_factory: TempPathFactory) -> None:
             self.a = a
     '''
     system = fromText(src, modname='mylib').system
-    tmp_path = tmp_path_factory.mktemp('test_generate_then_load_file')
     
     inv_writer, logger = get_inv_writer_with_logger(
         name='project-name',
@@ -871,8 +869,6 @@ def test_generate_then_load_file(tmp_path_factory: TempPathFactory) -> None:
     Client_doc = docstring2html(system2.allobjects['myclient.Client'])
     Client_a_doc = docstring2html(system2.allobjects['myclient.Client.a'])
 
-    assert re.fullmatch('<div><p><code><a href=".*" class="intersphinx-link">C</a></code></p></div>', 
-                        Client_doc.replace('\n', '')) is not None
-    assert re.fullmatch('<div><p><code><a href=".*" class="intersphinx-link">C.a</a></code></p></div>',
-                        Client_a_doc.replace('\n', '')) is not None
+    assert f'<a href="{tmp_path.as_posix()}/mylib.C.html"' in Client_doc.replace('\n', '')
+    assert f'<a href="{tmp_path.as_posix()}/mylib.C.html#a"' in Client_a_doc.replace('\n', '')
 

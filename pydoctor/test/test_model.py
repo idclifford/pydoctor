@@ -44,11 +44,6 @@ class FakeDocumentable:
     filepath: str
 
 
-@pytest.fixture(scope='module')
-def tempDir(request: FixtureRequest, tmp_path_factory: TempPathFactory) -> Path:
-    name = request.module.__name__.split('.')[-1]
-    return tmp_path_factory.mktemp(f'{name}-cache')
-
 
 @pytest.mark.parametrize('projectBaseDir', [
     PurePosixPath("/foo/bar/ProjectName"),
@@ -192,17 +187,16 @@ def test_fetchIntersphinxInventories_content() -> None:
         )
 
 
-def test_fetchIntersphinxInventories_content_file_with_base_url(tempDir:Path) -> None:
+def test_fetchIntersphinxInventories_content_file_with_base_url(tmp_path: Path) -> None:
     """
     Read and parse intersphinx inventories from file for each configured
     intersphix.
     """
-    root_dir = tempDir
-    path = root_dir / 'objects.inv'
+    path = tmp_path / 'objects.inv'
     with open(path, 'wb') as f:
         f.write(zlib.compress(b'twisted.package py:module -1 tm.html -'))
     
-    with open(root_dir / 'tm.html', "w") as f:
+    with open(tmp_path / 'tm.html', "w") as f:
         pass
 
     options = Options.defaults()
@@ -229,17 +223,16 @@ def test_fetchIntersphinxInventories_content_file_with_base_url(tempDir:Path) ->
             sut.intersphinx.getLink('twisted.package'))
 
 
-def test_fetchIntersphinxInventories_content_file(tempDir:Path) -> None:
+def test_fetchIntersphinxInventories_content_file(tmp_path: Path) -> None:
     """
     Read and parse intersphinx inventories from file for each configured
     intersphix.
     """
-    root_dir = tempDir
-    path = root_dir / 'objects.inv'
+    path = tmp_path / 'objects.inv'
     with open(path, 'wb') as f:
         f.write(zlib.compress(b'twisted.package py:module -1 tm.html -'))
     
-    with open(root_dir / 'tm.html', "w") as f:
+    with open(tmp_path / 'tm.html', "w") as f:
         pass
         
     options = Options.defaults()
@@ -262,7 +255,7 @@ def test_fetchIntersphinxInventories_content_file(tempDir:Path) -> None:
     sut.fetchIntersphinxInventories(Cache())
 
     assert [] == log
-    assert ((root_dir / 'tm.html').samefile(sut.intersphinx.getLink('twisted.package')))
+    assert ((tmp_path / 'tm.html').samefile(sut.intersphinx.getLink('twisted.package')))
 
 
 def test_docsources_class_attribute() -> None:

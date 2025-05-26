@@ -4,7 +4,7 @@ The command-line parsing.
 from __future__ import annotations
 
 import re
-from typing import Sequence, List, Optional, Type, Tuple, TYPE_CHECKING
+from typing import NamedTuple, Sequence, List, Optional, Type, Tuple, TYPE_CHECKING
 import sys
 import functools
 from pathlib import Path
@@ -42,18 +42,6 @@ PydoctorConfigParser = CompositeConfigParser(
                  IniConfigParser(CONFIG_SECTIONS, split_ml_text_to_list=True)])
 
 # ARGUMENTS PARSING
-
-def _intersphinx_file_tuple(s):
-    '''
-    Function returning a tuple (inventory file, base_url) for the 
-    intersphinx-file commandline argument
-    '''
-    if "::" in s:
-        filename, base_url = s.split("::")
-        return (filename, base_url)
-    else:
-        return (s, None)
-
 
 def get_parser() -> ArgumentParser:
     parser = ArgumentParser(
@@ -237,7 +225,6 @@ def get_parser() -> ArgumentParser:
     parser.add_argument(
         '--intersphinx-file', action='append', dest='intersphinx_file',
         metavar='PATH_TO_OBJECTS.INV[::BASE_URL]', default=[], 
-        type=_intersphinx_file_tuple,
         help=(
             "Use Sphinx objects inventory file to generate links to external "
             "documentation. If the optional base URL is provided, the links "
@@ -328,6 +315,52 @@ def _convert_htmlbaseurl(url:str | None) -> str | None:
     if url and not url.endswith('/'): 
         url += '/'
     return url
+class IntersphinxFile(NamedTuple):
+    filepath: str
+    base_url: str | None
+def _parse_intersphinx_file(s: str) -> IntersphinxFile:
+    '''
+    Function returning a tuple (inventory file, base_url) for the 
+    intersphinx-file commandline argument. Used double commas because the simple comma
+    might conflict with windows drive names.
+
+    >>> _parse_intersphinx_file('c:/one::https://two/')
+    IntersphinxFile(filepath='c:/one', base_url='https://two/')
+    >>> _parse_intersphinx_file('c:/one')
+    IntersphinxFile(filepath='c:/one', base_url=None)
+    >>> _parse_intersphinx_file('three::c:/one::https://two/')
+    Traceback (most recent call last):
+    ...
+    ValueError: delimiter '::' when used, must be present only once per --interspinx-file option
+    >>> _parse_intersphinx_file('::one')
+    Traceback (most recent call last):
+    ...
+    ValueError: delimiter '::' must be present in between two non-empty strings
+    >>> _parse_intersphinx_file('one::')
+    Traceback (most recent call last):
+    ...
+    ValueError: delimiter '::' must be present in between two non-empty strings
+    >>> _parse_intersphinx_file('::::')
+    Traceback (most recent call last):
+    ...
+    ValueError: delimiter '::' when used, must be present only once per --interspinx-file option
+    '''
+    sep = '::'
+    if sep in s:
+        try:
+            filename, base_url = s.split(sep)
+        except ValueError:
+            raise ValueError(f'delimiter {sep!r} when used, must be present only once per --interspinx-file option')
+        if any(not v for v in [filename, base_url]):
+            raise ValueError(f'delimiter {sep!r} must be present in between two non-empty strings')
+        return IntersphinxFile(filename, base_url)
+    else:
+        return IntersphinxFile(s, None)
+def _convert_intersphinx_file(files: list[str]) -> list[IntersphinxFile]:
+    try:
+        return list(map(_parse_intersphinx_file, files))
+    except ValueError as e:
+        error(str(e))
 
 _RECOGNIZED_SOURCE_HREF = {
         # Sourceforge
@@ -403,7 +436,7 @@ class Options:
     intersphinx_cache_path:     str                                 = attr.ib()
     clear_intersphinx_cache:    bool                                = attr.ib()
     intersphinx_cache_max_age:  str                                 = attr.ib()
-    intersphinx_file:       List[str]                               = attr.ib()
+    intersphinx_file:       list[IntersphinxFile]                   = attr.ib(converter=_convert_intersphinx_file)
     pyvalreprlinelen:       int                                     = attr.ib()
     pyvalreprmaxlines:      int                                     = attr.ib()
     sidebarexpanddepth:     int                                     = attr.ib()

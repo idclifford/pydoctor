@@ -6,7 +6,6 @@ import datetime
 import io
 import string
 import zlib
-import re
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Iterator, List, Optional, Tuple, cast

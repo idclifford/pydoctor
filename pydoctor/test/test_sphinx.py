@@ -788,7 +788,7 @@ def test_intersphinx_file(inv_reader_nolog: sphinx.SphinxInventory,
     with open(root_dir / 'module2.html', "w") as f:
         pass
 
-    inv_reader_nolog.update_file(path)
+    inv_reader_nolog.update_file(path, None)
 
     assert (root_dir / 'module1.html').samefile(inv_reader_nolog.getLink('some.module1'))
     assert (root_dir / 'module2.html').samefile(inv_reader_nolog.getLink('other.module2'))
